@@ -117,7 +117,7 @@ export default function LaunchPathAI() {
         body: JSON.stringify({ message: userMessage })   // ✅ FIXED: Netlify expects "message"
       });
 
-      const data = await response.json();
+     const response = await fetch('https://launchpathai.netlify.app/.netlify/functions/chat', {
 
       const assistantMessage = data.reply || 'Sorry, something went wrong.'; // ✅ FIXED: match chat.js
 
