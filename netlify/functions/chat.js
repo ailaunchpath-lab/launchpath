@@ -1,63 +1,51 @@
-export async function handler(event) {
-  if (event.httpMethod !== "POST") {
-    return {
-      statusCode: 405,
-      body: "Method Not Allowed"
-    };
-  }
-
+export default async (request) => {
   try {
-    const body = JSON.parse(event.body);
-    const userMessages = body.messages || [];
+    const { message } = JSON.parse(request.body);
 
-    // Convert frontend messages to Gemini format
-    const geminiMessages = userMessages.map(msg => ({
-      role: msg.role === "assistant" ? "model" : "user",
-      parts: [{ text: msg.content }]
-    }));
+    const apiKey = process.env.GEMINI_API_KEY;
 
-    const systemPrompt = `
-      You are LaunchPath AI — a smart, helpful assistant
-      specializing in business, school success, productivity,
-      entrepreneurship, and beginner-friendly help.
-    `;
+    if (!apiKey) {
+      return new Response(JSON.stringify({ error: "Missing API key" }), {
+        status: 500,
+      });
+    }
 
-    // Use built-in fetch (no node-fetch needed)
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+    const completion = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent",
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
+        },
         body: JSON.stringify({
-          contents: geminiMessages,
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 1000
-          }
-        })
+          contents: [
+            {
+              parts: [{ text: message }],
+            },
+          ],
+        }),
       }
     );
 
-    const data = await response.json();
+    const data = await completion.json();
 
-    const aiText =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "Sorry, something went wrong.";
+    if (!data.candidates || !data.candidates.length) {
+      return new Response(
+        JSON.stringify({ error: "No response from AI model" }),
+        { status: 500 }
+      );
+    }
 
-    return {
-      statusCode: 200,
+    const aiResponse =
+      data.candidates[0].content.parts[0].text || "No response generated.";
+
+    return new Response(JSON.stringify({ reply: aiResponse }), {
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        content: [{ type: "text", text: aiText }]
-      })
-    };
-
+    });
   } catch (err) {
-    console.error("Function Error:", err);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: "Server error — check Netlify logs." })
-    };
+    return new Response(JSON.stringify({ error: "Server error", details: err.message }), {
+      status: 500,
+    });
   }
-}
+};
