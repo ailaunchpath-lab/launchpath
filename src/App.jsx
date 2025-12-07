@@ -100,6 +100,7 @@ export default function LaunchPathAI() {
     setShowAuthModal(true);
   };
 
+  // ⭐⭐⭐ FIXED ONLY THIS FUNCTION ⭐⭐⭐
   const sendMessage = async (messageText) => {
     const userMessage = messageText || input;
     if (!userMessage.trim() || loading) return;
@@ -113,11 +114,13 @@ export default function LaunchPathAI() {
       const response = await fetch('/.netlify/functions/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: newMessages })
+        body: JSON.stringify({ message: userMessage })   // ✅ FIXED: Netlify expects "message"
       });
 
       const data = await response.json();
-      const assistantMessage = data.content?.filter(block => block.type === 'text').map(block => block.text).join('\n') || 'Sorry, something went wrong.';
+
+      const assistantMessage = data.reply || 'Sorry, something went wrong.'; // ✅ FIXED: match chat.js
+
       setMessages([...newMessages, { role: 'assistant', content: assistantMessage }]);
     } catch (error) {
       setMessages([...newMessages, { role: 'assistant', content: 'Sorry, there was an error. Please try again.' }]);
@@ -125,6 +128,7 @@ export default function LaunchPathAI() {
       setLoading(false);
     }
   };
+  // ⭐⭐⭐ END OF FIX ⭐⭐⭐
 
   if (checkingAuth) {
     return (
@@ -183,7 +187,7 @@ export default function LaunchPathAI() {
             </div>
             <span style={{ fontSize: '24px', fontWeight: '900', color: '#000000' }}>LaunchPath</span>
           </div>
-          
+
           <div className="flex items-center gap-4">
             {user && user !== 'guest' && (
               <span style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>{user.email}</span>
@@ -212,7 +216,7 @@ export default function LaunchPathAI() {
             </div>
             <h1 style={{ fontSize: '36px', fontWeight: '900', color: '#000000', marginBottom: '12px' }}>LaunchPath</h1>
             <p style={{ fontSize: '18px', color: '#4B5563', fontWeight: '500', marginBottom: '32px', maxWidth: '450px' }}>Your AI assistant for everything — with expertise in business, finance & investing</p>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-2xl px-4">
               {["Explain quantum physics simply", "How do I start investing in stocks?", "Help me with my chemistry homework", "Best business ideas for beginners", "Write a poem about the ocean", "How does compound interest work?"].map((prompt, idx) => (
                 <button

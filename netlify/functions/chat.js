@@ -1,60 +1,39 @@
-const fetch = (...args) =>
-  import("node-fetch").then(({ default: fetch }) => fetch(...args));
+import fetch from "node-fetch";
 
-exports.handler = async function (event, context) {
+export const handler = async (event, context) => {
   try {
-    const { message } = JSON.parse(event.body);
+    const body = JSON.parse(event.body || "{}");
+    const messages = body.messages || [];
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: "Missing API key" }),
-      };
-    }
-
-    const completion = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent",
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" +
+        process.env.GEMINI_API_KEY,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [
             {
-              parts: [{ text: message }],
+              parts: messages.map((m) => ({
+                text: m.content,
+              })),
             },
           ],
         }),
       }
     );
 
-    const data = await completion.json();
-
-    if (!data.candidates || !data.candidates.length) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: "No response from AI model" }),
-      };
-    }
-
-    const aiResponse =
-      data.candidates[0].content.parts[0].text || "No response generated.";
+    const data = await response.json();
 
     return {
       statusCode: 200,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reply: aiResponse }),
+      body: JSON.stringify(data),
     };
-  } catch (err) {
+  } catch (error) {
+    console.error("Function error:", error);
     return {
       statusCode: 500,
-      body: JSON.stringify({
-        error: "Server error",
-        details: err.message,
-      }),
+      body: JSON.stringify({ error: "Server error" }),
     };
   }
 };
