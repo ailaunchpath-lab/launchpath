@@ -1,22 +1,22 @@
-export default async (request) => {
+export const handler = async (event) => {
   try {
-    const { message } = JSON.parse(request.body);
+    const { message } = JSON.parse(event.body);
 
     const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: "Missing API key" }), {
-        status: 500,
-      });
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: "Missing API key" }),
+      };
     }
 
     const completion = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent",
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + apiKey,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-goog-api-key": apiKey,
         },
         body: JSON.stringify({
           contents: [
@@ -31,21 +31,28 @@ export default async (request) => {
     const data = await completion.json();
 
     if (!data.candidates || !data.candidates.length) {
-      return new Response(
-        JSON.stringify({ error: "No response from AI model" }),
-        { status: 500 }
-      );
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: "No response from AI model" }),
+      };
     }
 
-    const aiResponse =
-      data.candidates[0].content.parts[0].text || "No response generated.";
+    const reply =
+      data.candidates[0].content.parts[0].text ||
+      "No response generated.";
 
-    return new Response(JSON.stringify({ reply: aiResponse }), {
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ reply }),
       headers: { "Content-Type": "application/json" },
-    });
+    };
   } catch (err) {
-    return new Response(JSON.stringify({ error: "Server error", details: err.message }), {
-      status: 500,
-    });
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
+        error: "Server error",
+        details: err.message,
+      }),
+    };
   }
 };
