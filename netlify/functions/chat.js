@@ -12,16 +12,9 @@ export const handler = async (event) => {
     }));
 
     const apiKey = process.env.GEMINI_API_KEY;
-    
-    if (!apiKey) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ content: [{ type: 'text', text: 'ERROR: No API key found' }] })
-      };
-    }
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -34,7 +27,6 @@ export const handler = async (event) => {
 
     const data = await response.json();
     
-    // Check for errors from Gemini
     if (data.error) {
       return {
         statusCode: 500,
