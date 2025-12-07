@@ -11,8 +11,17 @@ export const handler = async (event) => {
       parts: [{ text: msg.content }]
     }));
 
+    const apiKey = process.env.GEMINI_API_KEY;
+    
+    if (!apiKey) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ content: [{ type: 'text', text: 'ERROR: No API key found' }] })
+      };
+    }
+
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -24,7 +33,16 @@ export const handler = async (event) => {
     );
 
     const data = await response.json();
-    const aiMessage = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, something went wrong.';
+    
+    // Check for errors from Gemini
+    if (data.error) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ content: [{ type: 'text', text: 'GEMINI ERROR: ' + data.error.message }] })
+      };
+    }
+
+    const aiMessage = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response from Gemini';
 
     return {
       statusCode: 200,
@@ -32,7 +50,9 @@ export const handler = async (event) => {
       body: JSON.stringify({ content: [{ type: 'text', text: aiMessage }] })
     };
   } catch (error) {
-    console.error('Error:', error);
-    return { statusCode: 500, body: JSON.stringify({ error: 'Failed to connect to AI' }) };
+    return { 
+      statusCode: 500, 
+      body: JSON.stringify({ content: [{ type: 'text', text: 'CATCH ERROR: ' + error.message }] }) 
+    };
   }
 };
