@@ -1,9 +1,11 @@
-export const handler = async (event) => {
+const fetch = (...args) =>
+  import("node-fetch").then(({ default: fetch }) => fetch(...args));
+
+exports.handler = async function (event, context) {
   try {
     const { message } = JSON.parse(event.body);
 
     const apiKey = process.env.GEMINI_API_KEY;
-
     if (!apiKey) {
       return {
         statusCode: 500,
@@ -12,11 +14,12 @@ export const handler = async (event) => {
     }
 
     const completion = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + apiKey,
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent",
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
         },
         body: JSON.stringify({
           contents: [
@@ -37,14 +40,13 @@ export const handler = async (event) => {
       };
     }
 
-    const reply =
-      data.candidates[0].content.parts[0].text ||
-      "No response generated.";
+    const aiResponse =
+      data.candidates[0].content.parts[0].text || "No response generated.";
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ reply }),
       headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reply: aiResponse }),
     };
   } catch (err) {
     return {
