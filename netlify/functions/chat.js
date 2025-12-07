@@ -1,9 +1,4 @@
-// Fix for Node not having fetch by default in Netlify Functions
-const fetch = (...args) =>
-  import('node-fetch').then(({ default: fetch }) => fetch(...args));
-
-exports.handler = async (event) => {
-  // Only allow POST
+export async function handler(event) {
   if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,
@@ -21,14 +16,13 @@ exports.handler = async (event) => {
       parts: [{ text: msg.content }]
     }));
 
-    // System prompt for the AI's personality
     const systemPrompt = `
-      You are LaunchPath AI — a smart, helpful assistant 
-      specializing in business, finance, entrepreneurship, 
-      productivity, school support, and motivation.
+      You are LaunchPath AI — a smart, helpful assistant
+      specializing in business, school success, productivity,
+      entrepreneurship, and beginner-friendly help.
     `;
 
-    // Fetch from Google Gemini API using Netlify environment key
+    // Use built-in fetch (no node-fetch needed)
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
@@ -47,7 +41,6 @@ exports.handler = async (event) => {
 
     const data = await response.json();
 
-    // Extract AI response
     const aiText =
       data?.candidates?.[0]?.content?.parts?.[0]?.text ||
       "Sorry, something went wrong.";
@@ -64,9 +57,7 @@ exports.handler = async (event) => {
     console.error("Function Error:", err);
     return {
       statusCode: 500,
-      body: JSON.stringify({
-        error: "Server error — check Netlify logs."
-      })
+      body: JSON.stringify({ error: "Server error — check Netlify logs." })
     };
   }
-};
+}
